@@ -3,41 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Controle v2</title>
+    <title>Painel Carga v3</title>
     <style>
         body { font-family: sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
         .card { background: #1e293b; padding: 15px; margin: 10px auto; border-radius: 10px; max-width: 400px; }
         .val { font-size: 1.8rem; color: #38bdf8; font-weight: bold; }
-        button { padding: 15px; width: 80%; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; }
-        .btn-conectar { background: #2563eb; color: white; }
-        .btn-motor { background: #dc2626; color: white; }
-        .btn-salvar { background: #059669; color: white; }
+        button { padding: 15px; width: 45%; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; color: white; }
+        .btn-conectar { background: #2563eb; width: 93%; }
+        .btn-motor { background: #3b82f6; }
+        .btn-reset { background: #e11d48; }
+        .btn-salvar { background: #059669; width: 93%; }
+        .status-badge { font-size: 0.7rem; padding: 4px; border-radius: 4px; background: #475569; }
     </style>
 </head>
 <body>
-    <h2>Sistema de Carga & Motor</h2>
-    <button class="btn-conectar" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
+    <h2>Controle de Carga</h2>
+    <button class="btn-conectar" onclick="conectar()">CONECTAR DISPOSITIVO</button>
 
     <div class="card">
-        <p>Dado Bruto Célula (HX711):</p>
+        <p>Dado Bruto Célula:</p>
         <div id="peso" class="val">---</div>
     </div>
 
     <div class="card">
-        <p>Bateria: <span id="bat">---</span>%</p>
-        <p>Relógio ESP: <span id="clock">--:--</span></p>
+        <p>Bateria: <span id="bat">---</span>% | RTC: <span id="clock">--:--</span></p>
+        <div id="statusLongo" class="status-badge">Próximo giro: Normal (2s)</div>
     </div>
 
     <div class="card">
-        <p>Acionamento Manual:</p>
-        <button class="btn-motor" onmousedown="controlarMotor('1')" onmouseup="controlarMotor('0')" ontouchstart="controlarMotor('1')" ontouchend="controlarMotor('0')">SEGURE PARA LIGAR MOTOR</button>
+        <p>Comandos Manuais:</p>
+        <button class="btn-motor" onclick="enviarComando('MOTOR_ON')">GIRAR (2s)</button>
+        <button class="btn-reset" onclick="enviarComando('RESET')">RESET (5s)</button>
     </div>
 
     <div class="card">
-        <p>Agendar Horário:</p>
-        <input type="time" id="inputHora" style="font-size: 1.2rem; padding: 5px;">
-        <button class="btn-salvar" onclick="enviarHorario()">DEFINIR AGENDAMENTO</button>
-        <p style="font-size: 0.8rem;">Último acionamento: <span id="lastMotor">---</span></p>
+        <p>Agendamento:</p>
+        <input type="time" id="inputHora" style="font-size: 1.2rem; margin-bottom: 10px;">
+        <button class="btn-salvar" onclick="enviarHorario()">SALVAR HORÁRIO</button>
+        <p style="font-size: 0.8rem; margin-top: 10px;">Último giro: <span id="lastMotor">---</span></p>
     </div>
 
     <script>
@@ -57,40 +60,32 @@
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 
-                // Receber Dados
                 const dataChar = await service.getCharacteristic(DATA_CHAR_UUID);
                 await dataChar.startNotifications();
                 dataChar.addEventListener('characteristicvaluechanged', (e) => {
-                    const [peso, bat, lastM, realTime] = new TextDecoder().decode(e.target.value).split('|');
+                    const [peso, bat, lastM, realTime, isLongo] = new TextDecoder().decode(e.target.value).split('|');
                     document.getElementById('peso').innerText = peso;
                     document.getElementById('bat').innerText = bat;
                     document.getElementById('lastMotor').innerText = lastM;
                     document.getElementById('clock').innerText = realTime;
+                    document.getElementById('statusLongo').innerText = isLongo === "1" ? "Próximo giro: LONGO (5s)" : "Próximo giro: Normal (2s)";
                 });
 
                 configChar = await service.getCharacteristic(CONF_CHAR_UUID);
-
-                // SINCRONIZA HORÁRIO AUTOMATICAMENTE AO CONECTAR
                 const agora = new Date();
                 const syncStr = `SYNC:${agora.getFullYear()}-${agora.getMonth()+1}-${agora.getDate()} ${agora.getHours()}:${agora.getMinutes()}:${agora.getSeconds()}`;
                 await configChar.writeValue(encoder.encode(syncStr));
-
-                alert("Conectado e Hora Sincronizada!");
+                alert("Conectado!");
             } catch (err) { alert(err.message); }
+        }
+
+        async function enviarComando(cmd) {
+            if (configChar) await configChar.writeValue(encoder.encode(cmd));
         }
 
         async function enviarHorario() {
             const hora = document.getElementById('inputHora').value;
-            if (configChar && hora) {
-                await configChar.writeValue(encoder.encode("SCH:" + hora));
-                alert("Agendado para: " + hora);
-            }
-        }
-
-        async function controlarMotor(estado) {
-            if (configChar) {
-                await configChar.writeValue(encoder.encode("MOT:" + estado));
-            }
+            if (configChar && hora) await configChar.writeValue(encoder.encode("SCH:" + hora));
         }
     </script>
 </body>
