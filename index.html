@@ -3,89 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Carga v3</title>
+    <title>Sinvita - Alimentador</title>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
-        .card { background: #1e293b; padding: 15px; margin: 10px auto; border-radius: 10px; max-width: 400px; }
-        .val { font-size: 1.8rem; color: #38bdf8; font-weight: bold; }
-        button { padding: 15px; width: 45%; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; color: white; }
-        .btn-conectar { background: #2563eb; width: 93%; }
-        .btn-motor { background: #3b82f6; }
-        .btn-reset { background: #e11d48; }
-        .btn-salvar { background: #059669; width: 93%; }
-        .status-badge { font-size: 0.7rem; padding: 4px; border-radius: 4px; background: #475569; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a192f; color: #e6f1ff; text-align: center; padding: 20px; }
+        h1 { color: #64ffda; margin-bottom: 5px; }
+        .subtitle { color: #8892b0; font-size: 1.1rem; margin-bottom: 25px; }
+        .card { background: #112240; padding: 20px; margin: 15px auto; border-radius: 12px; max-width: 420px; border: 1px solid #233554; }
+        .val { font-size: 2rem; color: #64ffda; font-weight: bold; }
+        button { padding: 15px; width: 45%; font-weight: bold; cursor: pointer; border-radius: 6px; border: none; margin: 5px; transition: 0.3s; }
+        .btn-conectar { background: #64ffda; color: #0a192f; width: 95%; margin-bottom: 20px; }
+        .btn-motor { background: #1d4ed8; color: white; }
+        .btn-reset { background: #f43f5e; color: white; }
+        .btn-save { background: #10b981; width: 95%; color: white; margin-top: 10px; }
+        input[type="time"] { background: #0a192f; color: white; border: 1px solid #64ffda; padding: 8px; border-radius: 4px; font-size: 1rem; width: 120px; }
+        .status-badge { font-size: 0.8rem; background: #233554; padding: 5px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h2>Controle de Carga</h2>
-    <button class="btn-conectar" onclick="conectar()">CONECTAR DISPOSITIVO</button>
+    <h1>Sinvita</h1>
+    <div class="subtitle">Alimentador sem fio para peixes</div>
+    
+    <button class="btn-conectar" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
 
     <div class="card">
-        <p>Dado Bruto Célula:</p>
+        <p>Estoque de Ração (Bruto):</p>
         <div id="peso" class="val">---</div>
     </div>
 
     <div class="card">
-        <p>Bateria: <span id="bat">---</span>% | RTC: <span id="clock">--:--</span></p>
+        <p>Bateria: <span id="bat">--</span>% | Hora: <span id="clock">--:--</span></p>
         <div id="statusLongo" class="status-badge">Próximo giro: Normal (2s)</div>
     </div>
 
     <div class="card">
-        <p>Comandos Manuais:</p>
-        <button class="btn-motor" onclick="enviarComando('MOTOR_ON')">GIRAR (2s)</button>
-        <button class="btn-reset" onclick="enviarComando('RESET')">RESET (5s)</button>
+        <p>Alimentação Manual:</p>
+        <button class="btn-motor" onclick="enviar('MOTOR_ON')">GIRAR 2s</button>
+        <button class="btn-reset" onclick="enviar('RESET')">RESET 5s</button>
     </div>
 
     <div class="card">
-        <p>Agendamento:</p>
-        <input type="time" id="inputHora" style="font-size: 1.2rem; margin-bottom: 10px;">
-        <button class="btn-salvar" onclick="enviarHorario()">SALVAR HORÁRIO</button>
-        <p style="font-size: 0.8rem; margin-top: 10px;">Último giro: <span id="lastMotor">---</span></p>
+        <p>Agendar Horários:</p>
+        <div style="display: flex; justify-content: space-around; margin-bottom: 10px;">
+            <div>Manhã: <br><input type="time" id="h1"></div>
+            <div>Tarde/Noite: <br><input type="time" id="h2"></div>
+        </div>
+        <button class="btn-save" onclick="salvarHorarios()">SALVAR AGENDAMENTOS</button>
+        <p style="font-size: 0.8rem; color: #8892b0;">Última refeição: <span id="lastMotor">---</span></p>
     </div>
 
     <script>
-        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-        const DATA_CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-        const CONF_CHAR_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-
-        let configChar;
-        const encoder = new TextEncoder();
+        const S_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const D_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const C_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+        let configChar; const enc = new TextEncoder();
 
         async function conectar() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'ESP32-SISTEMA-CARGA' }],
-                    optionalServices: [SERVICE_UUID]
+                    filters: [{ name: 'Sinvita-Alimentador' }], optionalServices: [S_UUID]
                 });
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                
-                const dataChar = await service.getCharacteristic(DATA_CHAR_UUID);
+                const service = await server.getPrimaryService(S_UUID);
+                const dataChar = await service.getCharacteristic(D_UUID);
                 await dataChar.startNotifications();
                 dataChar.addEventListener('characteristicvaluechanged', (e) => {
-                    const [peso, bat, lastM, realTime, isLongo] = new TextDecoder().decode(e.target.value).split('|');
-                    document.getElementById('peso').innerText = peso;
-                    document.getElementById('bat').innerText = bat;
-                    document.getElementById('lastMotor').innerText = lastM;
-                    document.getElementById('clock').innerText = realTime;
-                    document.getElementById('statusLongo').innerText = isLongo === "1" ? "Próximo giro: LONGO (5s)" : "Próximo giro: Normal (2s)";
+                    const [p, b, lm, rt, il] = new TextDecoder().decode(e.target.value).split('|');
+                    document.getElementById('peso').innerText = p;
+                    document.getElementById('bat').innerText = b;
+                    document.getElementById('lastMotor').innerText = lm;
+                    document.getElementById('clock').innerText = rt;
+                    document.getElementById('statusLongo').innerText = il === "1" ? "Próximo giro: LONGO (5s)" : "Próximo giro: Normal (2s)";
                 });
-
-                configChar = await service.getCharacteristic(CONF_CHAR_UUID);
-                const agora = new Date();
-                const syncStr = `SYNC:${agora.getFullYear()}-${agora.getMonth()+1}-${agora.getDate()} ${agora.getHours()}:${agora.getMinutes()}:${agora.getSeconds()}`;
-                await configChar.writeValue(encoder.encode(syncStr));
-                alert("Conectado!");
+                configChar = await service.getCharacteristic(C_UUID);
+                const a = new Date();
+                const s = `SYNC:${a.getFullYear()}-${a.getMonth()+1}-${a.getDate()} ${a.getHours()}:${a.getMinutes()}:${a.getSeconds()}`;
+                await configChar.writeValue(enc.encode(s));
+                alert("Sinvita Conectado!");
             } catch (err) { alert(err.message); }
         }
 
-        async function enviarComando(cmd) {
-            if (configChar) await configChar.writeValue(encoder.encode(cmd));
-        }
+        async function enviar(cmd) { if (configChar) await configChar.writeValue(enc.encode(cmd)); }
 
-        async function enviarHorario() {
-            const hora = document.getElementById('inputHora').value;
-            if (configChar && hora) await configChar.writeValue(encoder.encode("SCH:" + hora));
+        async function salvarHorarios() {
+            const h1 = document.getElementById('h1').value;
+            const h2 = document.getElementById('h2').value;
+            if (!configChar) return alert("Conecte primeiro!");
+            if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
+            if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
+            alert("Horários salvos com sucesso!");
         }
     </script>
 </body>
