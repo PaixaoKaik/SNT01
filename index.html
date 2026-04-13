@@ -13,68 +13,33 @@
         .val { font-size: 2.2rem; color: #64ffda; font-weight: bold; margin: 10px 0; }
         button { padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; transition: all 0.2s ease; font-size: 0.9rem; }
         .btn-conectar { background: #64ffda; color: #0a192f; width: 100%; font-size: 1.1rem; margin-bottom: 20px; }
-        .btn-conectar:hover { background: #52d1b2; transform: translateY(-2px); }
         .btn-motor { background: #1d4ed8; color: white; width: 47%; }
         .btn-reset { background: #f43f5e; color: white; width: 47%; }
         .btn-save { background: #10b981; width: 100%; color: white; margin-top: 15px; }
-        .time-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
-        .time-group { flex: 1; display: flex; flex-direction: column; align-items: center; }
-        .time-label { font-size: 0.75rem; color: #8892b0; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
         input[type="time"] { background: #0a192f; color: #64ffda; border: 1px solid #64ffda; padding: 10px; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; outline: none; }
         .status-badge { font-size: 0.8rem; background: #233554; padding: 6px 15px; border-radius: 50px; display: inline-block; margin-top: 15px; border: 1px solid #64ffda44; color: #64ffda; }
-        .info-text { font-size: 0.85rem; color: #8892b0; margin-top: 10px; }
-        #lastMotor { color: #ccd6f6; font-weight: bold; }
+        #log { font-size: 0.8rem; color: #ff9800; margin-top: 10px; height: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sinvita</h1>
-        <div class="subtitle">Alimentador sem fio para peixes</div>
+        <div class="subtitle">Alimentador a Bateria</div>
         
         <button class="btn-conectar" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
 
         <div class="card">
-            <p style="margin:0; font-size: 0.9rem; color: #8892b0;">Estoque de Ração (Bruto)</p>
+            <p style="margin:0; font-size: 0.9rem; color: #8892b0;">Peso Atual</p>
             <div id="peso" class="val">---</div>
-        </div>
-
-        <div class="card">
-            <div style="display: flex; justify-content: space-around; align-items: center;">
-                <div>
-                    <p style="margin:0; font-size: 0.8rem; color: #8892b0;">Bateria</p>
-                    <div style="font-size: 1.2rem; font-weight: bold;"><span id="bat">--</span>%</div>
-                </div>
-                <div style="width: 1px; height: 30px; background: #233554;"></div>
-                <div>
-                    <p style="margin:0; font-size: 0.8rem; color: #8892b0;">Relógio ESP</p>
-                    <div style="font-size: 1.2rem; font-weight: bold;" id="clock">--:--</div>
-                </div>
-            </div>
-            <div id="statusLongo" class="status-badge">Giro: Normal (2s)</div>
-        </div>
-
-        <div class="card">
-            <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Comandos de Giro</p>
-            <div style="display: flex; justify-content: space-between;">
-                <button class="btn-motor" onclick="enviar('MOTOR_ON')">GIRAR 2s</button>
-                <button class="btn-reset" onclick="enviar('RESET')">RESET 5s</button>
-            </div>
+            <div id="statusLongo" class="status-badge">Aguardando Conexão...</div>
         </div>
 
         <div class="card">
             <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Agendamento Automático</p>
-            <div class="time-row">
-                <div class="time-group">
-                    <span class="time-label">Manhã (00h-11h)</span>
-                    <input type="time" id="h1" min="00:00" max="11:59">
-                </div>
-                <div class="time-group">
-                    <span class="time-label">Tarde (12h-23h)</span>
-                    <input type="time" id="h2" min="12:00" max="23:59">
-                </div>
-            </div>
-            <button class="btn-save" onclick="salvarHorarios()">SALVAR AGENDAMENTOS</button>
-            <div class="info-text">Última alimentação: <span id="lastMotor">---</span></div>
+            <input type="time" id="h1" style="margin-bottom: 10px;">
+            <input type="time" id="h2">
+            <button class="btn-save" id="btnSave" onclick="salvarComRetentativa()">SALVAR AGENDAMENTOS</button>
+            <div id="log"></div>
         </div>
     </div>
 
@@ -83,63 +48,69 @@
         const D_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
         const C_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
         
-        let configChar; 
+        let configChar, device, server;
         const enc = new TextEncoder();
 
         async function conectar() {
             try {
-                const device = await navigator.bluetooth.requestDevice({
+                device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'Sinvita-Alimentador' }], 
                     optionalServices: [S_UUID]
                 });
-                const server = await device.gatt.connect();
+                server = await device.gatt.connect();
                 const service = await server.getPrimaryService(S_UUID);
                 
                 const dataChar = await service.getCharacteristic(D_UUID);
                 await dataChar.startNotifications();
                 dataChar.addEventListener('characteristicvaluechanged', (e) => {
                     const [p, b, lm, rt, il] = new TextDecoder().decode(e.target.value).split('|');
-                    document.getElementById('peso').innerText = p;
-                    document.getElementById('bat').innerText = b;
-                    document.getElementById('lastMotor').innerText = lm;
-                    document.getElementById('clock').innerText = rt;
-                    document.getElementById('statusLongo').innerText = il === "1" ? "Giro: LONGO (5s)" : "Giro: Normal (2s)";
+                    document.getElementById('peso').innerText = p + "g";
+                    document.getElementById('statusLongo').innerText = "Bateria: " + b + "% | ESP: " + rt;
                 });
 
                 configChar = await service.getCharacteristic(C_UUID);
-                
-                // Sincroniza hora
-                const a = new Date();
-                const s = `SYNC:${a.getFullYear()}-${a.getMonth()+1}-${a.getDate()} ${a.getHours()}:${a.getMinutes()}:${a.getSeconds()}`;
-                await configChar.writeValue(enc.encode(s));
-                
-                alert("Conectado e Hora Sincronizada!");
-            } catch (err) { alert("Erro: " + err.message); }
+                document.getElementById('log').innerText = "Conectado!";
+            } catch (err) { 
+                document.getElementById('log').innerText = "Erro ao conectar.";
+            }
         }
 
-        async function enviar(cmd) { 
-            if (configChar) await configChar.writeValue(enc.encode(cmd)); 
-            else alert("Conecte o Bluetooth primeiro!");
-        }
-
-        async function salvarHorarios() {
-            if (!configChar) return alert("Conecte primeiro!");
-            
+        async function salvarComRetentativa() {
             const h1 = document.getElementById('h1').value;
             const h2 = document.getElementById('h2').value;
-
-            // Validação de turnos
-            if (h1 && h1 >= "12:00") {
-                return alert("O horário da manhã deve ser definido entre 00:00 e 11:59.");
-            }
-            if (h2 && h2 < "12:00") {
-                return alert("O horário da tarde/noite deve ser definido entre 12:00 e 23:59.");
-            }
-
-            if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
-            if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
             
-            alert("Agendamentos enviados com sucesso!");
+            if (!h1 && !h2) return alert("Defina um horário!");
+
+            document.getElementById('btnSave').innerText = "TENTANDO CONECTAR...";
+            document.getElementById('btnSave').disabled = true;
+
+            // Tenta por 70 segundos (cobre o ciclo de 60s de sono do ESP)
+            let sucesso = false;
+            const tempoLimite = Date.now() + 70000;
+
+            while (Date.now() < tempoLimite && !sucesso) {
+                try {
+                    if (!device || !device.gatt.connected) {
+                        await conectar();
+                    }
+                    if (configChar) {
+                        if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
+                        if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
+                        sucesso = true;
+                    }
+                } catch (e) {
+                    document.getElementById('log').innerText = "Buscando dispositivo (o ESP pode estar dormindo)...";
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            if (sucesso) {
+                alert("Horários salvos com sucesso!");
+            } else {
+                alert("Não foi possível encontrar o alimentador. Verifique se a bateria acabou.");
+            }
+            document.getElementById('btnSave').innerText = "SALVAR AGENDAMENTOS";
+            document.getElementById('btnSave').disabled = false;
         }
     </script>
 </body>
