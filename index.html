@@ -11,17 +11,21 @@
         .subtitle { color: #8892b0; font-size: 1rem; margin-bottom: 30px; letter-spacing: 1px; }
         .card { background: #112240; padding: 20px; margin: 15px 0; border-radius: 12px; border: 1px solid #233554; box-shadow: 0 10px 30px -15px rgba(2,12,27,0.7); }
         .val { font-size: 2.2rem; color: #64ffda; font-weight: bold; margin: 10px 0; }
-        button { padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; transition: all 0.2s ease; font-size: 0.9rem; }
-        .btn-conectar { background: #64ffda; color: #0a192f; width: 100%; font-size: 1.1rem; margin-bottom: 20px; }
-        .btn-motor { background: #1d4ed8; color: white; width: 47%; }
-        .btn-reset { background: #f43f5e; color: white; width: 47%; }
-        .btn-save { background: #10b981; width: 100%; color: white; margin-top: 15px; }
+        button { padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; }
+        .btn-conectar { background: #64ffda; color: #0a192f; font-size: 1.1rem; margin-bottom: 20px; }
+        .btn-motor { background: #1d4ed8; color: white; width: 48%; }
+        .btn-reset { background: #f43f5e; color: white; width: 48%; }
+        .btn-save { background: #10b981; color: white; margin-top: 15px; }
+        .btn-save:disabled { background: #334155; cursor: not-allowed; }
+        
         .time-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
         .time-group { flex: 1; display: flex; flex-direction: column; align-items: center; }
         .time-label { font-size: 0.75rem; color: #8892b0; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
         input[type="time"] { background: #0a192f; color: #64ffda; border: 1px solid #64ffda; padding: 10px; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; outline: none; }
+        
         .status-badge { font-size: 0.8rem; background: #233554; padding: 6px 15px; border-radius: 50px; display: inline-block; margin-top: 15px; border: 1px solid #64ffda44; color: #64ffda; }
-        #log { font-size: 0.85rem; color: #ff9800; margin-top: 15px; min-height: 1.2em; }
+        #log-status { font-size: 0.85rem; color: #ff9800; margin-top: 15px; font-weight: bold; min-height: 1.2em; }
+        .info-text { font-size: 0.85rem; color: #8892b0; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -29,16 +33,16 @@
         <h1>Sinvita</h1>
         <div class="subtitle">Alimentador Sem Fio (Modo Bateria)</div>
         
-        <button class="btn-conectar" onclick="conectar()">CONECTAR BLUETOOTH</button>
+        <button class="btn-conectar" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
 
         <div class="card">
-            <p style="margin:0; font-size: 0.9rem; color: #8892b0;">Status do Sistema</p>
+            <p style="margin:0; font-size: 0.9rem; color: #8892b0;">Status Atual</p>
             <div id="peso" class="val">---</div>
             <div id="statusInfo" class="status-badge">Aguardando Conexão...</div>
         </div>
 
         <div class="card">
-            <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Comandos Manuais</p>
+            <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Comandos Rápidos</p>
             <div style="display: flex; justify-content: space-between;">
                 <button class="btn-motor" onclick="enviarComRetentativa('MOTOR_ON')">GIRAR 2s</button>
                 <button class="btn-reset" onclick="enviarComRetentativa('RESET')">GIRAR 5s</button>
@@ -58,6 +62,112 @@
                 </div>
             </div>
             <button class="btn-save" id="btnSave" onclick="salvarHorariosComRetentativa()">SALVAR AGENDAMENTOS</button>
+            <div class="info-text">Última alimentação: <span id="lastMotor">---</span></div>
         </div>
 
-        <div id="log">A
+        <div id="log-status">Dica: Aperte o botão no alimentador para conectar agora.</div>
+    </div>
+
+    <script>
+        const S_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const D_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const C_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+        
+        let configChar, device, server;
+        const enc = new TextEncoder();
+
+        function atualizarLog(msg) {
+            document.getElementById('log-status').innerText = msg;
+        }
+
+        async function conectar() {
+            try {
+                atualizarLog("Buscando Sinvita...");
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Sinvita-Alimentador' }], 
+                    optionalServices: [S_UUID]
+                });
+                
+                atualizarLog("Conectando...");
+                server = await device.gatt.connect();
+                const service = await server.getPrimaryService(S_UUID);
+                
+                const dataChar = await service.getCharacteristic(D_UUID);
+                await dataChar.startNotifications();
+                dataChar.addEventListener('characteristicvaluechanged', (e) => {
+                    const raw = new TextDecoder().decode(e.target.value);
+                    const [p, b, lm, rt] = raw.split('|');
+                    document.getElementById('peso').innerText = p + "g";
+                    document.getElementById('lastMotor').innerText = lm;
+                    document.getElementById('statusInfo').innerText = `Bat: ${b}% | ESP: ${rt}`;
+                });
+
+                configChar = await service.getCharacteristic(C_UUID);
+                atualizarLog("Conectado e Sincronizado!");
+                return true;
+            } catch (err) { 
+                atualizarLog("Dispositivo não encontrado ou dormindo.");
+                return false; 
+            }
+        }
+
+        async function enviarComRetentativa(comando) {
+            atualizarLog(`Enviando comando: ${comando}...`);
+            try {
+                if (!device || !device.gatt.connected) {
+                    const ok = await conectar();
+                    if (!ok) return;
+                }
+                await configChar.writeValue(enc.encode(comando));
+                atualizarLog("Comando executado!");
+            } catch (e) {
+                atualizarLog("Erro ao enviar. Tente novamente.");
+            }
+        }
+
+        async function salvarHorariosComRetentativa() {
+            const h1 = document.getElementById('h1').value;
+            const h2 = document.getElementById('h2').value;
+            
+            if (!h1 && !h2) return alert("Preencha ao menos um horário!");
+
+            const btn = document.getElementById('btnSave');
+            btn.innerText = "SINCRONIZANDO (Aguarde até 60s)...";
+            btn.disabled = true;
+
+            let sucesso = false;
+            const fimTentativas = Date.now() + 75000; // Tenta por 75 segundos
+
+            while (Date.now() < fimTentativas && !sucesso) {
+                atualizarLog("Procurando sinal do alimentador...");
+                try {
+                    // Tenta conectar se não estiver conectado
+                    if (!device || !device.gatt.connected) {
+                        await conectar();
+                    }
+                    
+                    if (configChar && device.gatt.connected) {
+                        if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
+                        if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
+                        sucesso = true;
+                    }
+                } catch (e) {
+                    // Falha silenciosa para continuar tentando no loop
+                    await new Promise(r => setTimeout(r, 2000)); 
+                }
+            }
+
+            if (sucesso) {
+                alert("Agendamentos salvos com sucesso!");
+                atualizarLog("Sincronização concluída!");
+            } else {
+                alert("Não foi possível conectar. O alimentador pode estar sem bateria ou muito longe.");
+                atualizarLog("Falha na sincronização.");
+            }
+
+            btn.innerText = "SALVAR AGENDAMENTOS";
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
