@@ -15,8 +15,10 @@
         .btn-motor { background: #1d4ed8; color: white; }
         .btn-reset { background: #f43f5e; color: white; }
         .btn-save { background: #10b981; width: 95%; color: white; margin-top: 10px; }
-        input[type="time"] { background: #0a192f; color: white; border: 1px solid #64ffda; padding: 8px; border-radius: 4px; font-size: 1rem; width: 120px; }
-        .status-badge { font-size: 0.8rem; background: #233554; padding: 5px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; }
+        input[type="time"] { background: #0a192f; color: white; border: 1px solid #64ffda; padding: 8px; border-radius: 4px; font-size: 1rem; width: 125px; outline: none; }
+        input[type="time"]:invalid { border-color: #f43f5e; }
+        .status-badge { font-size: 0.8rem; background: #233554; padding: 5px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; border: 1px solid #64ffda33; }
+        .time-label { font-size: 0.8rem; color: #8892b0; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -31,7 +33,7 @@
     </div>
 
     <div class="card">
-        <p>Bateria: <span id="bat">--</span>% | Hora: <span id="clock">--:--</span></p>
+        <p>Bateria: <span id="bat">--</span>% | Relógio ESP: <span id="clock">--:--</span></p>
         <div id="statusLongo" class="status-badge">Próximo giro: Normal (2s)</div>
     </div>
 
@@ -44,26 +46,36 @@
     <div class="card">
         <p>Agendar Horários:</p>
         <div style="display: flex; justify-content: space-around; margin-bottom: 10px;">
-            <div>Manhã: <br><input type="time" id="h1"></div>
-            <div>Tarde/Noite: <br><input type="time" id="h2"></div>
+            <div>
+                <span class="time-label">MANHÃ (00h-11h)</span>
+                <input type="time" id="h1" min="00:00" max="11:59">
+            </div>
+            <div>
+                <span class="time-label">TARDE (12h-23h)</span>
+                <input type="time" id="h2" min="12:00" max="23:59">
+            </div>
         </div>
         <button class="btn-save" onclick="salvarHorarios()">SALVAR AGENDAMENTOS</button>
-        <p style="font-size: 0.8rem; color: #8892b0;">Última refeição: <span id="lastMotor">---</span></p>
+        <p style="font-size: 0.8rem; color: #8892b0; margin-top: 15px;">Última refeição: <span id="lastMotor">---</span></p>
     </div>
 
     <script>
         const S_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
         const D_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
         const C_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-        let configChar; const enc = new TextEncoder();
+        
+        let configChar; 
+        const enc = new TextEncoder();
 
         async function conectar() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'Sinvita-Alimentador' }], optionalServices: [S_UUID]
+                    filters: [{ name: 'Sinvita-Alimentador' }], 
+                    optionalServices: [S_UUID]
                 });
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(S_UUID);
+                
                 const dataChar = await service.getCharacteristic(D_UUID);
                 await dataChar.startNotifications();
                 dataChar.addEventListener('characteristicvaluechanged', (e) => {
@@ -74,23 +86,41 @@
                     document.getElementById('clock').innerText = rt;
                     document.getElementById('statusLongo').innerText = il === "1" ? "Próximo giro: LONGO (5s)" : "Próximo giro: Normal (2s)";
                 });
+
                 configChar = await service.getCharacteristic(C_UUID);
+                
+                // Sincroniza hora automaticamente
                 const a = new Date();
                 const s = `SYNC:${a.getFullYear()}-${a.getMonth()+1}-${a.getDate()} ${a.getHours()}:${a.getMinutes()}:${a.getSeconds()}`;
                 await configChar.writeValue(enc.encode(s));
-                alert("Sinvita Conectado!");
-            } catch (err) { alert(err.message); }
+                
+                alert("Sinvita Conectado e Hora Sincronizada!");
+            } catch (err) { alert("Erro: " + err.message); }
         }
 
-        async function enviar(cmd) { if (configChar) await configChar.writeValue(enc.encode(cmd)); }
+        async function enviar(cmd) { 
+            if (configChar) await configChar.writeValue(enc.encode(cmd)); 
+            else alert("Conecte o Bluetooth primeiro!");
+        }
 
         async function salvarHorarios() {
+            if (!configChar) return alert("Conecte primeiro!");
+            
             const h1 = document.getElementById('h1').value;
             const h2 = document.getElementById('h2').value;
-            if (!configChar) return alert("Conecte primeiro!");
+
+            // Validação extra via JS
+            if (h1 && h1 >= "12:00") {
+                return alert("O horário da manhã deve ser antes das 12:00!");
+            }
+            if (h2 && h2 < "12:00") {
+                return alert("O horário da tarde/noite deve ser após as 12:00!");
+            }
+
             if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
             if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
-            alert("Horários salvos com sucesso!");
+            
+            alert("Horários salvos!");
         }
     </script>
 </body>
