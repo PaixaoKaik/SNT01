@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Carga e Motor</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 20px; }
+        .card { background: #1e293b; padding: 20px; margin: 15px auto; border-radius: 15px; max-width: 400px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+        .val { font-size: 1.5rem; font-weight: bold; color: #38bdf8; }
+        button { padding: 15px 30px; font-weight: bold; cursor: pointer; background: #2563eb; color: white; border: none; border-radius: 8px; transition: 0.3s; }
+        button:hover { background: #1d4ed8; }
+        input[type="time"] { padding: 10px; border-radius: 5px; border: none; font-size: 1.1rem; margin-top: 10px; }
+        .status { font-size: 0.8rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <h2>Painel de Controle ESP32</h2>
+    <button onclick="conectar()">CONECTAR DISPOSITIVO</button>
+
+    <div class="card">
+        <p>Peso Atual (HX711)</p>
+        <div id="peso" class="val">--- kg</div>
+    </div>
+
+    <div class="card">
+        <p>Nível da Bateria</p>
+        <div id="bat" class="val">--- %</div>
+        <div class="status">Ref: 1.5V - 2.1V</div>
+    </div>
+
+    <div class="card">
+        <p>Agendar Acionamento (Motor Porta 0)</p>
+        <input type="time" id="inputHora">
+        <br><br>
+        <button onclick="enviarHorario()" style="background: #059669;">SALVAR HORÁRIO</button>
+        <p class="status">Último acionamento: <span id="lastMotor">---</span></p>
+    </div>
+
+    <p id="clock" class="status">Relógio ESP32: --:--</p>
+
+    <script>
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const DATA_CHAR_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const CONF_CHAR_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+        let configCharacteristic;
+
+        async function conectar() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32-SISTEMA-CARGA' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                // Característica de Dados (Notificação)
+                const dataChar = await service.getCharacteristic(DATA_CHAR_UUID);
+                await dataChar.startNotifications();
+                dataChar.addEventListener('characteristicvaluechanged', (e) => {
+                    const rawData = new TextDecoder().decode(e.target.value);
+                    const [peso, bat, lastM, realTime] = rawData.split('|');
+                    
+                    document.getElementById('peso').innerText = peso + " kg";
+                    document.getElementById('bat').innerText = bat + "%";
+                    document.getElementById('lastMotor').innerText = lastM;
+                    document.getElementById('clock').innerText = "Relógio ESP32: " + realTime;
+                });
+
+                // Característica de Configuração (Escrita)
+                configCharacteristic = await service.getCharacteristic(CONF_CHAR_UUID);
+
+                alert("Conectado com Sucesso!");
+            } catch (err) {
+                alert("Erro: " + err.message);
+            }
+        }
+
+        async function enviarHorario() {
+            const hora = document.getElementById('inputHora').value;
+            if (!hora) return alert("Escolha um horário!");
+            if (!configCharacteristic) return alert("Conecte o Bluetooth primeiro!");
+
+            const encoder = new TextEncoder();
+            await configCharacteristic.writeValue(encoder.encode(hora));
+            alert("Horário " + hora + " enviado!");
+        }
+    </script>
+</body>
+</html>
