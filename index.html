@@ -3,145 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinvita PRO - Gestão de Alimentação</title>
+    <title>Sinvita - Alimentador de Peixes</title>
     <style>
-        :root {
-            --bg-deep: #020617;
-            --bg-card: #0a192f;
-            --accent: #64ffda;
-            --text-main: #e6f1ff;
-            --text-dim: #8892b0;
-            --danger: #f43f5e;
-            --success: #10b981;
-        }
-        body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            background: var(--bg-deep); 
-            color: var(--text-main); 
-            text-align: center; 
-            padding: 20px; 
-            margin: 0;
-        }
-        .container { max-width: 480px; margin: 0 auto; }
-        h1 { color: var(--accent); margin-bottom: 5px; font-size: 2.2rem; }
-        .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 20px; letter-spacing: 1px; }
-        
-        .status-panel { 
-            background: #112240; 
-            padding: 12px; 
-            border-radius: 10px; 
-            border: 1px solid rgba(100, 255, 218, 0.2);
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            line-height: 1.4;
-        }
-        
-        .card { 
-            background: var(--bg-card); 
-            padding: 20px; 
-            margin: 15px 0; 
-            border-radius: 15px; 
-            border: 1px solid #233554;
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-        }
-
-        .val-big { font-size: 2.5rem; color: var(--accent); font-weight: bold; margin: 10px 0; }
-        
-        button { 
-            padding: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            border-radius: 10px; 
-            border: none; 
-            transition: 0.3s; 
-            font-size: 0.9rem;
-        }
-        .btn-main { background: var(--accent); color: var(--bg-deep); width: 100%; font-size: 1.1rem; }
-        .btn-action { background: #1d4ed8; color: white; width: 48%; }
-        .btn-prime { background: var(--danger); color: white; width: 48%; }
-        .btn-save { background: var(--success); color: white; width: 100%; margin-top: 15px; }
-        
-        .time-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
-            margin-top: 10px; 
-        }
-        .time-box { display: flex; flex-direction: column; text-align: left; }
-        .label-small { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
-        
-        input[type="time"] { 
-            background: var(--bg-deep); 
-            color: var(--accent); 
-            border: 1px solid var(--accent); 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 1.1rem; 
-            width: 100%;
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        .footer-info { font-size: 0.75rem; color: var(--text-dim); margin-top: 15px; }
-        .highlight { color: var(--text-main); font-weight: bold; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a192f; color: #e6f1ff; text-align: center; padding: 20px; margin: 0; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h1 { color: #64ffda; margin-top: 10px; font-size: 2.5rem; }
+        .subtitle { color: #8892b0; font-size: 1rem; margin-bottom: 30px; letter-spacing: 1px; }
+        .card { background: #112240; padding: 20px; margin: 15px 0; border-radius: 12px; border: 1px solid #233554; box-shadow: 0 10px 30px -15px rgba(2,12,27,0.7); }
+        .val { font-size: 2.2rem; color: #64ffda; font-weight: bold; margin: 10px 0; }
+        button { padding: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; margin: 5px; transition: all 0.2s ease; font-size: 0.9rem; }
+        .btn-conectar { background: #64ffda; color: #0a192f; width: 100%; font-size: 1.1rem; margin-bottom: 20px; }
+        .btn-conectar:hover { background: #52d1b2; transform: translateY(-2px); }
+        .btn-motor { background: #1d4ed8; color: white; width: 47%; }
+        .btn-reset { background: #f43f5e; color: white; width: 47%; }
+        .btn-save { background: #10b981; width: 100%; color: white; margin-top: 15px; }
+        .time-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+        .time-group { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .time-label { font-size: 0.75rem; color: #8892b0; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
+        input[type="time"] { background: #0a192f; color: #64ffda; border: 1px solid #64ffda; padding: 10px; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; outline: none; }
+        .status-badge { font-size: 0.8rem; background: #233554; padding: 6px 15px; border-radius: 50px; display: inline-block; margin-top: 15px; border: 1px solid #64ffda44; color: #64ffda; }
+        .info-text { font-size: 0.85rem; color: #8892b0; margin-top: 10px; }
+        #lastMotor { color: #ccd6f6; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sinvita PRO</h1>
-        <div class="subtitle">ALIMENTADOR INTELIGENTE</div>
-
-        <div class="status-panel" id="statusBox">
-            <span style="color: var(--danger)">●</span> DISPOSITIVO EM REPOUSO<br>
-            Pressione o botão físico para ativar o Bluetooth (janela de 10s).
-        </div>
-
-        <button class="btn-main" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
+        <h1>Sinvita</h1>
+        <div class="subtitle">Alimentador sem fio para peixes</div>
+        
+        <button class="btn-conectar" onclick="conectar()">CONECTAR VIA BLUETOOTH</button>
 
         <div class="card">
-            <span class="label-small">Estoque de Ração (Bruto)</span>
-            <div id="peso" class="val-big">---</div>
+            <p style="margin:0; font-size: 0.9rem; color: #8892b0;">Estoque de Ração (Bruto)</p>
+            <div id="peso" class="val">---</div>
         </div>
 
         <div class="card">
-            <div style="display: flex; justify-content: space-around;">
+            <div style="display: flex; justify-content: space-around; align-items: center;">
                 <div>
-                    <span class="label-small">Bateria</span>
-                    <div style="font-size: 1.3rem;"><span id="bat">--</span>%</div>
+                    <p style="margin:0; font-size: 0.8rem; color: #8892b0;">Bateria</p>
+                    <div style="font-size: 1.2rem; font-weight: bold;"><span id="bat">--</span>%</div>
                 </div>
-                <div style="width: 1px; background: #233554;"></div>
+                <div style="width: 1px; height: 30px; background: #233554;"></div>
                 <div>
-                    <span class="label-small">Relógio ESP</span>
-                    <div style="font-size: 1.3rem;" id="clock">--:--</div>
+                    <p style="margin:0; font-size: 0.8rem; color: #8892b0;">Relógio ESP</p>
+                    <div style="font-size: 1.2rem; font-weight: bold;" id="clock">--:--</div>
                 </div>
+            </div>
+            <div id="statusLongo" class="status-badge">Giro: Normal (2s)</div>
+        </div>
+
+        <div class="card">
+            <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Comandos de Giro</p>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="btn-motor" onclick="enviar('MOTOR_ON')">GIRAR 2s</button>
+                <button class="btn-reset" onclick="enviar('RESET')">RESET 5s</button>
             </div>
         </div>
 
         <div class="card">
-            <span class="label-small">Acionamento Manual</span>
-            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                <button class="btn-action" onclick="enviar('MOTOR_ON')">ALIMENTAR (2s)</button>
-                <button class="btn-prime" onclick="enviar('RESET')">PRIME (5s)</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <span class="label-small">Agendamento Diário (Turnos)</span>
-            <div class="time-grid">
-                <div class="time-box">
-                    <span class="label-small">Manhã (00-11h)</span>
+            <p style="margin-top:0; font-size: 0.9rem; color: #8892b0;">Agendamento Automático</p>
+            <div class="time-row">
+                <div class="time-group">
+                    <span class="time-label">Manhã (00h-11h)</span>
                     <input type="time" id="h1" min="00:00" max="11:59">
                 </div>
-                <div class="time-box">
-                    <span class="label-small">Tarde (12-23h)</span>
+                <div class="time-group">
+                    <span class="time-label">Tarde (12h-23h)</span>
                     <input type="time" id="h2" min="12:00" max="23:59">
                 </div>
             </div>
-            <button class="btn-save" onclick="salvar()">GRAVAR NA FLASH</button>
-            <div class="footer-info">Último giro automático: <span id="lastMotor" class="highlight">---</span></div>
+            <button class="btn-save" onclick="salvarHorarios()">SALVAR AGENDAMENTOS</button>
+            <div class="info-text">Última alimentação: <span id="lastMotor">---</span></div>
         </div>
-
-        <p class="footer-info">O Sinvita entra em Deep Sleep após 10s de inatividade para poupar bateria.</p>
     </div>
 
     <script>
@@ -153,12 +87,9 @@
         const enc = new TextEncoder();
 
         async function conectar() {
-            const status = document.getElementById('statusBox');
-            status.innerHTML = "Buscando Sinvita...<br>Pressione o botão no aparelho se não aparecer.";
-            
             try {
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'Sinvita' }], 
+                    filters: [{ name: 'Sinvita-Alimentador' }], 
                     optionalServices: [S_UUID]
                 });
                 const server = await device.gatt.connect();
@@ -167,56 +98,48 @@
                 const dataChar = await service.getCharacteristic(D_UUID);
                 await dataChar.startNotifications();
                 dataChar.addEventListener('characteristicvaluechanged', (e) => {
-                    const decoded = new TextDecoder().decode(e.target.value);
-                    const [p, b, lm, rt] = decoded.split('|');
+                    const [p, b, lm, rt, il] = new TextDecoder().decode(e.target.value).split('|');
                     document.getElementById('peso').innerText = p;
                     document.getElementById('bat').innerText = b;
                     document.getElementById('lastMotor').innerText = lm;
                     document.getElementById('clock').innerText = rt;
+                    document.getElementById('statusLongo').innerText = il === "1" ? "Giro: LONGO (5s)" : "Giro: Normal (2s)";
                 });
 
                 configChar = await service.getCharacteristic(C_UUID);
                 
-                // Sincronização de Hora ao conectar
+                // Sincroniza hora
                 const a = new Date();
-                const sStr = `SYNC:${a.getFullYear()}-${a.getMonth()+1}-${a.getDate()} ${a.getHours()}:${a.getMinutes()}:${a.getSeconds()}`;
-                await configChar.writeValue(enc.encode(sStr));
+                const s = SYNC:${a.getFullYear()}-${a.getMonth()+1}-${a.getDate()} ${a.getHours()}:${a.getMinutes()}:${a.getSeconds()};
+                await configChar.writeValue(enc.encode(s));
                 
-                status.innerHTML = "<span style='color: var(--success)'>●</span> CONECTADO<br>Memória sincronizada.";
-            } catch (err) { 
-                status.innerHTML = "<span style='color: var(--danger)'>●</span> ERRO DE CONEXÃO<br>O aparelho pode ter dormido. Tente novamente.";
-                console.log(err);
-            }
+                alert("Conectado e Hora Sincronizada!");
+            } catch (err) { alert("Erro: " + err.message); }
         }
 
         async function enviar(cmd) { 
-            if (configChar) {
-                try {
-                    await configChar.writeValue(enc.encode(cmd));
-                } catch (e) {
-                    alert("Erro ao enviar comando. Verifique a conexão.");
-                }
-            } else {
-                alert("Conecte o Bluetooth primeiro!");
-            }
+            if (configChar) await configChar.writeValue(enc.encode(cmd)); 
+            else alert("Conecte o Bluetooth primeiro!");
         }
 
-        async function salvar() {
-            if (!configChar) return alert("Conecte o Bluetooth!");
-            const t1 = document.getElementById('h1').value;
-            const t2 = document.getElementById('h2').value;
+        async function salvarHorarios() {
+            if (!configChar) return alert("Conecte primeiro!");
+            
+            const h1 = document.getElementById('h1').value;
+            const h2 = document.getElementById('h2').value;
 
-            // Validação de Turnos (Web)
-            if (t1 && t1 >= "12:00") return alert("Horário da manhã deve ser antes das 12:00");
-            if (t2 && t2 < "12:00") return alert("Horário da tarde deve ser após as 12:00");
-
-            try {
-                if (t1) await configChar.writeValue(enc.encode("S1:" + t1));
-                if (t2) await configChar.writeValue(enc.encode("S2:" + t2));
-                alert("Agendamentos guardados na memória Flash!");
-            } catch (e) {
-                alert("Erro ao salvar. O dispositivo pode ter entrado em repouso.");
+            // Validação de turnos
+            if (h1 && h1 >= "12:00") {
+                return alert("O horário da manhã deve ser definido entre 00:00 e 11:59.");
             }
+            if (h2 && h2 < "12:00") {
+                return alert("O horário da tarde/noite deve ser definido entre 12:00 e 23:59.");
+            }
+
+            if (h1) await configChar.writeValue(enc.encode("S1:" + h1));
+            if (h2) await configChar.writeValue(enc.encode("S2:" + h2));
+            
+            alert("Agendamentos enviados com sucesso!");
         }
     </script>
 </body>
